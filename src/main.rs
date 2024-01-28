@@ -1,15 +1,12 @@
 mod crypto;
-use anyhow::{anyhow, Context};
+use anyhow::Context;
 use clap::Parser;
-use crypto::{decrypt, encrypt, Key};
-use rand::{thread_rng, Rng};
+use console::Key;
 use std::{
     fs,
-    io::{stdout, Write},
+    io::{stderr, stdout, Write},
     path::PathBuf,
 };
-
-const DEFAULT_KEYFILE: &str = ".config/rhinopuffin/keyfile";
 
 #[derive(Debug, Parser)]
 #[clap(name = "rhinopuffin")]
@@ -28,7 +25,7 @@ struct Args {
     output: Option<PathBuf>,
     /// Encryption/decryption key file
     #[arg(short, long)]
-    key_file: Option<String>,
+    key_file: Option<PathBuf>,
     /// Use encryption/decryption key string instead of key file
     #[arg(short, long)]
     raw_key: Option<String>,
@@ -36,37 +33,28 @@ struct Args {
 
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
+
     // get key
-    let key = if let Some(key) = args.raw_key {
-        Key::new(key)?
+    let key = if let Some(raw_key) = args.raw_key {
+        crypto::Key::new(raw_key)?
+    } else if let Some(key_file) = args.key_file {
+        let key_data = fs::read(key_file).context("read key file")?;
+        crypto::Key::new(key_data)?
     } else {
-        let file = if let Some(keyfile) = args.key_file {
-            PathBuf::from(keyfile)
-        } else {
-            let mut keyfile =
-                homedir::get_my_home()?.ok_or_else(|| anyhow!("get home directory"))?;
-            keyfile.push(DEFAULT_KEYFILE);
-            if !keyfile.exists() {
-                let config_dir = keyfile
-                    .parent()
-                    .ok_or_else(|| anyhow!("internal config dir error"))?;
-                fs::create_dir_all(config_dir).context("create config directory")?;
-                let key_data: [u8; 32] = thread_rng().gen();
-                fs::write(&keyfile, key_data).context("create new default key file")?;
-            }
-            keyfile
-        };
-        let key_data = fs::read(file).context("read key file")?;
-        Key::new(key_data)?
+        let raw_key = prompt("Encryption password: ")?;
+        crypto::Key::new(raw_key)?
     };
+
     // get data
     let input_data = fs::read(args.file).context("read input file")?;
+
     // perform encryption/decryption
     let output_data = if args.decrypt {
-        decrypt(&input_data, key)?
+        crypto::decrypt(&input_data, key)?
     } else {
-        encrypt(&input_data, key)?
+        crypto::encrypt(&input_data, key)?
     };
+
     // output
     if let Some(path) = args.output {
         fs::write(path, &output_data).context("write output file")?;
@@ -77,4 +65,31 @@ fn main() -> anyhow::Result<()> {
         stdout().flush().context("flush stdout")?;
     }
     Ok(())
+}
+
+fn prompt(prompt_text: &str) -> anyhow::Result<String> {
+    let mut input = String::new();
+    eprint!("{prompt_text}");
+    stderr().flush().context("flush stdout")?;
+    loop {
+        let term = console::Term::stderr();
+        let character = term.read_key().context("read key from terminal")?;
+        match character {
+            Key::Enter => {
+                eprintln!();
+                break;
+            }
+            Key::Char(c) => {
+                input.push(c);
+                eprint!("*");
+                stderr().flush().context("flush stdout")?;
+            }
+            Key::Backspace => {
+                input.pop();
+                term.clear_chars(1).context("clear character")?;
+            }
+            _other_key => continue,
+        };
+    }
+    Ok(input)
 }

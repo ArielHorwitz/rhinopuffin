@@ -10,17 +10,17 @@ const NONCE_SIZE: usize = 12;
 
 pub fn encrypt(plaintext: &[u8], key: Key) -> Result<Vec<u8>> {
     let nonce_data: [u8; NONCE_SIZE] = thread_rng().gen();
-    let mut ciphertext = key
+    let ciphertext = key
         .cipher
         .encrypt(Nonce::from_slice(&nonce_data), plaintext)
         .map_err(|e| anyhow!("encrypt: {e}"))?;
-    ciphertext.extend_from_slice(&nonce_data);
-    Ok(ciphertext)
+    let mut output_data = Vec::from(nonce_data);
+    output_data.extend(ciphertext);
+    Ok(output_data)
 }
 
 pub fn decrypt(ciphertext: &[u8], key: Key) -> Result<Vec<u8>> {
-    let split_at = ciphertext.len().saturating_sub(NONCE_SIZE);
-    let (ciphertext, nonce_data) = ciphertext.split_at(split_at);
+    let (nonce_data, ciphertext) = ciphertext.split_at(NONCE_SIZE);
     let plaintext = key
         .cipher
         .decrypt(Nonce::from_slice(nonce_data), ciphertext)
