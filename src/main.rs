@@ -23,10 +23,10 @@ struct Args {
     /// Output file
     #[arg(short, long)]
     output: Option<PathBuf>,
-    /// Encryption/decryption key file
+    /// Use a file as encryption/decryption key
     #[arg(short, long)]
     key_file: Option<PathBuf>,
-    /// Use encryption/decryption key string instead of key file
+    /// Use encryption/decryption key string instead of prompting
     #[arg(short, long)]
     raw_key: Option<String>,
 }
