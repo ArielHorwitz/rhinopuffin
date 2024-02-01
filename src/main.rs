@@ -4,7 +4,7 @@ use clap::Parser;
 use console::Key;
 use std::{
     fs,
-    io::{stderr, stdout, Write},
+    io::{stderr, stdout, Read, Write},
     path::PathBuf,
 };
 
@@ -14,9 +14,9 @@ use std::{
 #[clap(author = "https://ariel.ninja")]
 #[clap(version)]
 struct Args {
-    /// Input file
+    /// Input file (omit to read from stdin)
     #[arg()]
-    file: PathBuf,
+    file: Option<PathBuf>,
     /// Decrypt (encrypt by default)
     #[arg(short, long)]
     decrypt: bool,
@@ -34,6 +34,16 @@ struct Args {
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
+    // get data
+    let input_data = if let Some(file) = args.file {
+        fs::read(file).context("read input file")?
+    } else {
+        let mut data = Vec::new();
+        let mut stdin = std::io::stdin().lock();
+        stdin.read_to_end(&mut data).context("read stdin")?;
+        data
+    };
+
     // get key
     let key = if let Some(raw_key) = args.raw_key {
         crypto::Key::new(raw_key)?
@@ -44,9 +54,6 @@ fn main() -> anyhow::Result<()> {
         let raw_key = prompt("Encryption password: ")?;
         crypto::Key::new(raw_key)?
     };
-
-    // get data
-    let input_data = fs::read(args.file).context("read input file")?;
 
     // perform encryption/decryption
     let output_data = if args.decrypt {
@@ -86,7 +93,9 @@ fn prompt(prompt_text: &str) -> anyhow::Result<String> {
             }
             Key::Backspace => {
                 input.pop();
-                term.clear_chars(1).context("clear character")?;
+                if !input.is_empty() {
+                    term.clear_chars(1).context("clear character")?;
+                }
             }
             _other_key => continue,
         };

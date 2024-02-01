@@ -1,10 +1,10 @@
 ```
 A simple cli tool for encrypting and decrypting files with symmetric encryption.
 
-Usage: rhinopuffin [OPTIONS] <FILE>
+Usage: rhinopuffin [OPTIONS] [FILE]
 
 Arguments:
-  <FILE>  Input file
+  [FILE]  Input file (omit to read from stdin)
 
 Options:
   -d, --decrypt              Decrypt (encrypt by default)
