@@ -29,13 +29,16 @@ struct Args {
     /// Use encryption/decryption key string instead of prompting
     #[arg(short, long)]
     raw_key: Option<String>,
+    /// Remove input file
+    #[arg(short = 'D', long)]
+    delete: bool,
 }
 
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     // get data
-    let input_data = if let Some(file) = args.file {
+    let input_data = if let Some(file) = &args.file {
         fs::read(file).context("read input file")?
     } else {
         let mut data = Vec::new();
@@ -70,6 +73,12 @@ fn main() -> anyhow::Result<()> {
             .write_all(&output_data)
             .context("write to stdout")?;
         stdout().flush().context("flush stdout")?;
+    }
+
+    if args.delete {
+        if let Some(file) = &args.file {
+            std::fs::remove_file(file).context("remove input file")?;
+        }
     }
     Ok(())
 }

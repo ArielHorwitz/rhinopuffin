@@ -11,6 +11,7 @@ Options:
   -o, --output <OUTPUT>      Output file
   -k, --key-file <KEY_FILE>  Use a file as encryption/decryption key
   -r, --raw-key <RAW_KEY>    Use encryption/decryption key string instead of prompting
+  -D, --delete               Remove input file
   -h, --help                 Print help
   -V, --version              Print version
 ```
