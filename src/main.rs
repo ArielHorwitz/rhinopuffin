@@ -101,10 +101,10 @@ fn prompt(prompt_text: &str) -> anyhow::Result<String> {
                 stderr().flush().context("flush stdout")?;
             }
             Key::Backspace => {
-                input.pop();
                 if !input.is_empty() {
                     term.clear_chars(1).context("clear character")?;
                 }
+                input.pop();
             }
             _other_key => continue,
         };
