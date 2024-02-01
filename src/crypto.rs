@@ -20,6 +20,9 @@ pub fn encrypt(plaintext: &[u8], key: Key) -> Result<Vec<u8>> {
 }
 
 pub fn decrypt(ciphertext: &[u8], key: Key) -> Result<Vec<u8>> {
+    if ciphertext.len() < NONCE_SIZE {
+        anyhow::bail!("encrypted data too short")
+    }
     let (nonce_data, ciphertext) = ciphertext.split_at(NONCE_SIZE);
     let plaintext = key
         .cipher
